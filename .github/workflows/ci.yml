@@ -41,6 +41,8 @@ jobs:
         run: |
           python manage.py migrate
       - name: Run tests with coverage
+        env:
+          SECRET_KEY: testkey
         run: |
           coverage run manage.py test
           coverage report
