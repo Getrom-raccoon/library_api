@@ -43,6 +43,12 @@ jobs:
       - name: Run tests with coverage
         env:
           SECRET_KEY: testkey
+          USE_POSTGRES: "True"
+          DB_NAME: test_db
+          DB_USER: test_user
+          DB_PASSWORD: test_pass
+          DB_HOST: localhost
+          DB_PORT: 5432
         run: |
           coverage run manage.py test
           coverage report
