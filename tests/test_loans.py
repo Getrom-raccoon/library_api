@@ -62,3 +62,22 @@ class LoanAPITest(TestCase):
         self.assertTrue(self.loan.returned)
         self.book.refresh_from_db()
         self.assertEqual(self.book.available_copies, 5)
+
+    def test_borrow_unavailable_book(self):
+        self.book.available_copies = 0
+        self.book.save()
+        data = {'book': self.book.id, 'due_date': (timezone.now() + timedelta(days=14)).isoformat()}
+        response = self.client.post('/api/loans/', data)
+        self.assertEqual(response.status_code, 400)
+
+    def test_return_already_returned(self):
+        loan = Loan.objects.create(user=self.user, book=self.book, due_date=timezone.now() + timedelta(days=14),
+                                   returned=True)
+        response = self.client.delete(f'/api/loans/{loan.id}/')
+        self.assertEqual(response.status_code, 400)
+
+    def test_view_other_user_loan(self):
+        other_user = User.objects.create_user(email='other@test.com', password='test')
+        loan = Loan.objects.create(user=other_user, book=self.book, due_date=timezone.now() + timedelta(days=14))
+        response = self.client.get(f'/api/loans/{loan.id}/')
+        self.assertEqual(response.status_code, 404)

@@ -56,3 +56,16 @@ class BookAPITest(TestCase):
         response = self.client.delete(f'/api/books/{self.book.id}/')
         self.assertEqual(response.status_code, 204)
         self.assertEqual(Book.objects.count(), 0)
+
+    def test_negative_copies(self):
+        data = {
+            'title': 'Bad Book',
+            'author': self.author.id,
+            'genre': 'Fiction',
+            'isbn': '9876543210987',
+            'published_year': 2023,
+            'total_copies': -1,
+            'available_copies': -1
+        }
+        response = self.client.post('/api/books/', data)
+        self.assertEqual(response.status_code, 400)

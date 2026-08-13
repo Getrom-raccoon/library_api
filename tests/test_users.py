@@ -33,3 +33,8 @@ class UserAPITest(TestCase):
         response = self.client.get('/api/users/profile/')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data['email'], 'test@test.com')
+
+    def test_unauthorized_access(self):
+        client = APIClient()
+        response = client.get('/api/loans/')
+        self.assertEqual(response.status_code, 401)

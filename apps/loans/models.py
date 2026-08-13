@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from apps.books.models import Book
 
 class Loan(models.Model):
