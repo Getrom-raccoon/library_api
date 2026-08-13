@@ -21,5 +21,7 @@ class BookSerializer(serializers.ModelSerializer):
         if available < 0:
             raise serializers.ValidationError({'available_copies': 'Доступных копий не может быть меньше 0'})
         if available > total:
-            raise serializers.ValidationError({'available_copies': 'Доступных копий не может быть больше общего количества'})
+            raise serializers.ValidationError({
+                'available_copies': 'Доступных копий не может быть больше общего количества'
+            })
         return data
