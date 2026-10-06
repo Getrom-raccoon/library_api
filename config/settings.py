@@ -134,3 +134,9 @@ SPECTACULAR_SETTINGS = {
     'DESCRIPTION': 'API for library management',
     'VERSION': '1.0.0',
 }
+
+CORS_ALLOWED_ORIGINS = [
+    "https://silver-eagle-9893.ru.tuna.am",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+]
