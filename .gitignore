@@ -18,4 +18,4 @@ postgres_data/
 redis_data/
 .coverage
 celerybeat-schedule*
-ngrok-*.zip*
+ngrok-*.zip**.save
