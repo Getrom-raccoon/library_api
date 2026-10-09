@@ -14,14 +14,19 @@ class BookViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = Book.objects.filter(owner=self.request.user)
 
-        # Ручной поиск без учёта регистра
         search = self.request.query_params.get('search', '').strip()
         if search:
-            queryset = queryset.filter(
-                Q(title__icontains=search) |
-                Q(author__name__icontains=search) |
-                Q(isbn__icontains=search)
-            )
+            # PostgreSQL с локалью C не понимает icontains для кириллицы.
+            # Поэтому фильтруем в Python — регистронезависимо.
+            search_lower = search.lower()
+            matching_ids = []
+            for b in queryset.select_related('author'):
+                if (b.title and search_lower in b.title.lower()) \
+                        or (b.author and b.author.name
+                            and search_lower in b.author.name.lower()) \
+                        or (b.isbn and search_lower in b.isbn.lower()):
+                    matching_ids.append(b.id)
+            queryset = Book.objects.filter(id__in=matching_ids).select_related('author')
 
         return queryset
 
@@ -37,7 +42,7 @@ class AuthorViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         name = serializer.validated_data.get('name', '').strip()
-        # Защита от дублей: если автор с таким именем уже есть — не создаём
+        # Защита от дублей
         existing = Author.objects.filter(
             owner=self.request.user, name__iexact=name
         ).first()
