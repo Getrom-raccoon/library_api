@@ -44,6 +44,7 @@ class Book(models.Model):
         IN_PROGRESS = 'in_progress', 'В процессе'
         FINISHED = 'finished', 'Прочитана'
         ABANDONED = 'abandoned', 'Отложена'
+        WANT_TO_BUY = 'want_to_buy', 'Хочу купить'
 
     reading_status = models.CharField(
         max_length=20,
