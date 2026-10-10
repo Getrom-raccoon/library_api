@@ -91,3 +91,43 @@ class Book(models.Model):
 
     def __str__(self):
         return self.title
+
+class Work(models.Model):
+    """Произведение внутри книги (рассказ, повесть, стих и т.д.)."""
+    book = models.ForeignKey(
+        Book,
+        on_delete=models.CASCADE,
+        related_name='works',
+        verbose_name='Книга'
+    )
+    title = models.CharField(
+        max_length=200,
+        verbose_name='Название произведения'
+    )
+    author = models.CharField(
+        max_length=150,
+        blank=True,
+        null=True,
+        verbose_name='Автор произведения',
+        help_text='Если отличается от автора книги'
+    )
+    is_read = models.BooleanField(
+        default=False,
+        verbose_name='Прочитано'
+    )
+    order = models.PositiveIntegerField(
+        default=0,
+        verbose_name='Порядок'
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Дата добавления'
+    )
+
+    class Meta:
+        verbose_name = 'Произведение'
+        verbose_name_plural = 'Произведения'
+        ordering = ['order', 'id']
+
+    def __str__(self):
+        return self.title
