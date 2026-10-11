@@ -1,8 +1,9 @@
 import re
-from datetime import timedelta
 
 from django.db.models import Q
 from django.utils import timezone
+from datetime import timedelta
+
 from rest_framework import viewsets, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -10,7 +11,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 
 from .models import Book, Author, ISBNCache
 from .serializers import BookSerializer, AuthorSerializer
-from .isbn_lookup import lookup_wb, lookup_openlibrary
+from .isbn_lookup import lookup_openlibrary
 
 
 class BookViewSet(viewsets.ModelViewSet):
@@ -24,8 +25,8 @@ class BookViewSet(viewsets.ModelViewSet):
 
         search = self.request.query_params.get('search', '').strip()
         if search:
-            # PostgreSQL с локалью C не понимает icontains для кириллицы.
-            # Поэтому фильтруем в Python — регистронезависимо.
+            # PostgreSQL с локалью C не понимает icontains для кириллицы,
+            # поэтому фильтруем в Python — регистронезависимо.
             search_lower = search.lower()
             matching_ids = []
             for b in queryset.select_related('author'):
@@ -34,7 +35,9 @@ class BookViewSet(viewsets.ModelViewSet):
                             and search_lower in b.author.name.lower()) \
                         or (b.isbn and search_lower in b.isbn.lower()):
                     matching_ids.append(b.id)
-            queryset = Book.objects.filter(id__in=matching_ids).select_related('author')
+            queryset = Book.objects.filter(
+                id__in=matching_ids
+            ).select_related('author')
 
         return queryset
 
@@ -43,9 +46,12 @@ class BookViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'], url_path='lookup-isbn')
     def lookup_isbn(self, request):
-        isbn = (request.query_params.get('isbn') or '').strip()
-        # Убираем дефисы, пробелы
-        isbn = re.sub(r'[^0-9Xx]', '', isbn)
+        """
+        Поиск книги по ISBN через международный каталог.
+        Сначала кэш (30 дней), потом Open Library.
+        """
+        raw = (request.query_params.get('isbn') or '').strip()
+        isbn = re.sub(r'[^0-9Xx]', '', raw)
 
         if not isbn or len(isbn) < 10:
             return Response(
@@ -53,7 +59,7 @@ class BookViewSet(viewsets.ModelViewSet):
                 status=400,
             )
 
-        # 1. Проверяем кэш
+        # 1. Проверяем кэш — данные не старше 30 дней
         cached = ISBNCache.objects.filter(isbn=isbn).first()
         if cached and (timezone.now() - cached.updated_at) < timedelta(days=30):
             return Response({
@@ -62,20 +68,16 @@ class BookViewSet(viewsets.ModelViewSet):
                 **self._serialize_isbn(cached),
             })
 
-        # 2. WB
-        data = lookup_wb(isbn)
-
-        # 3. Если не нашли — Open Library
-        if not data:
-            data = lookup_openlibrary(isbn)
+        # 2. Open Library
+        data = lookup_openlibrary(isbn)
 
         if not data:
             return Response(
-                {'error': 'Книга не найдена ни в Wildberries, ни в Open Library'},
+                {'error': 'Книга не найдена в международном каталоге'},
                 status=404,
             )
 
-        # 4. Сохраняем/обновляем в кэш
+        # 3. Кэшируем результат
         obj, _ = ISBNCache.objects.update_or_create(
             isbn=isbn, defaults=data
         )
@@ -114,5 +116,7 @@ class AuthorViewSet(viewsets.ModelViewSet):
         ).first()
         if existing:
             from rest_framework.exceptions import ValidationError
-            raise ValidationError({'name': 'Автор с таким именем уже существует'})
+            raise ValidationError(
+                {'name': 'Автор с таким именем уже существует'}
+            )
         serializer.save(owner=self.request.user)
