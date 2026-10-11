@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Book, Author, Work
+from .models import Book, Author, Work, ISBNCache
 
 
 class AuthorSerializer(serializers.ModelSerializer):
@@ -66,3 +66,11 @@ class BookSerializer(serializers.ModelSerializer):
                 Work.objects.create(book=instance, order=i, **w)
 
         return instance
+
+class ISBNCacheSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ISBNCache
+        fields = [
+            'isbn', 'title', 'author_name', 'genre',
+            'year', 'pages', 'cover_url', 'description', 'source',
+        ]

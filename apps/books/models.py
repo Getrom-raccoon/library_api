@@ -131,3 +131,33 @@ class Work(models.Model):
 
     def __str__(self):
         return self.title
+
+class ISBNCache(models.Model):
+    """Кэш данных о книгах по ISBN. Общий для всех пользователей."""
+    isbn = models.CharField(
+        max_length=20, unique=True, db_index=True, verbose_name='ISBN'
+    )
+    title = models.CharField(max_length=300, blank=True, verbose_name='Название')
+    author_name = models.CharField(
+        max_length=200, blank=True, verbose_name='Автор'
+    )
+    genre = models.CharField(max_length=100, blank=True, verbose_name='Жанр')
+    year = models.IntegerField(null=True, blank=True, verbose_name='Год')
+    pages = models.IntegerField(null=True, blank=True, verbose_name='Страниц')
+    cover_url = models.URLField(blank=True, null=True, verbose_name='Обложка')
+    description = models.TextField(blank=True, null=True, verbose_name='Описание')
+    source = models.CharField(
+        max_length=20, default='wb', verbose_name='Источник'
+    )
+    raw_data = models.JSONField(
+        blank=True, null=True, verbose_name='Сырые данные'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Кэш ISBN'
+        verbose_name_plural = 'Кэш ISBN'
+
+    def __str__(self):
+        return f'{self.isbn} — {self.title}'

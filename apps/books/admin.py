@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Book, Author, Work
+from .models import Book, Author, Work, ISBNCache
 
 
 @admin.register(Author)
@@ -30,3 +30,10 @@ class WorkAdmin(admin.ModelAdmin):
     list_filter = ('is_read',)
     search_fields = ('title', 'author', 'book__title')
     ordering = ('book', 'order')
+
+@admin.register(ISBNCache)
+class ISBNCacheAdmin(admin.ModelAdmin):
+    list_display = ('isbn', 'title', 'author_name', 'source', 'updated_at')
+    search_fields = ('isbn', 'title', 'author_name')
+    list_filter = ('source',)
+    readonly_fields = ('created_at', 'updated_at')

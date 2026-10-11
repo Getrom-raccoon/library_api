@@ -1,8 +1,13 @@
 from django.db.models import Q
 from rest_framework import viewsets, filters
 from django_filters.rest_framework import DjangoFilterBackend
-from .models import Book, Author
+from .models import Book, Author, ISBNCache
 from .serializers import BookSerializer, AuthorSerializer
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from django.utils import timezone
+from datetime import timedelta
+from .isbn_lookup import lookup_wb, lookup_openlibrary
 
 
 class BookViewSet(viewsets.ModelViewSet):
@@ -32,6 +37,64 @@ class BookViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
+
+    @action(detail=False, methods=['get'], url_path='lookup-isbn')
+    def lookup_isbn(self, request):
+        isbn = (request.query_params.get('isbn') or '').strip()
+        # Убираем дефисы, пробелы
+        isbn = re.sub(r'[^0-9Xx]', '', isbn)
+
+        if not isbn or len(isbn) < 10:
+            return Response(
+                {'error': 'Введите корректный ISBN (10 или 13 цифр)'},
+                status=400,
+            )
+
+        # 1. Проверяем кэш
+        cached = ISBNCache.objects.filter(isbn=isbn).first()
+        if cached and (timezone.now() - cached.updated_at) < timedelta(days=30):
+            return Response({
+                'success': True,
+                'from_cache': True,
+                **self._serialize_isbn(cached),
+            })
+
+        # 2. WB
+        data = lookup_wb(isbn)
+
+        # 3. Если не нашли — Open Library
+        if not data:
+            data = lookup_openlibrary(isbn)
+
+        if not data:
+            return Response(
+                {'error': 'Книга не найдена ни в Wildberries, ни в Open Library'},
+                status=404,
+            )
+
+        # 4. Сохраняем/обновляем в кэш
+        obj, _ = ISBNCache.objects.update_or_create(
+            isbn=isbn, defaults=data
+        )
+
+        return Response({
+            'success': True,
+            'from_cache': False,
+            **self._serialize_isbn(obj),
+        })
+
+    @staticmethod
+    def _serialize_isbn(obj):
+        return {
+            'isbn': obj.isbn,
+            'title': obj.title,
+            'author': obj.author_name,
+            'genre': obj.genre,
+            'year': obj.year,
+            'pages': obj.pages,
+            'cover_url': obj.cover_url,
+            'source': obj.source,
+        }
 
 
 class AuthorViewSet(viewsets.ModelViewSet):
