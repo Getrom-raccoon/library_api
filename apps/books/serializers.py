@@ -27,7 +27,8 @@ class BookSerializer(serializers.ModelSerializer):
         model = Book
         fields = [
             'id', 'title', 'author', 'author_detail',
-            'genre', 'isbn', 'published_year',
+            'genres', 'publisher',  # ← изменили
+            'isbn', 'published_year',
             'total_copies', 'available_copies',
             'owner', 'reading_status', 'reading_status_display',
             'rating', 'notes', 'pages',

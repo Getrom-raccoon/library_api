@@ -18,9 +18,12 @@ class WorkInline(admin.TabularInline):
 
 @admin.register(Book)
 class BookAdmin(admin.ModelAdmin):
-    list_display = ('id', 'title', 'author', 'genre', 'isbn', 'available_copies', 'reading_status')
-    list_filter = ('genre', 'author', 'reading_status')
-    search_fields = ('title', 'isbn', 'author__name')
+    list_display = (
+        'id', 'title', 'author', 'publisher',
+        'isbn', 'available_copies', 'reading_status',
+    )
+    list_filter = ('author', 'reading_status', 'publisher')
+    search_fields = ('title', 'isbn', 'author__name', 'publisher')
     inlines = [WorkInline]
 
 
@@ -30,6 +33,7 @@ class WorkAdmin(admin.ModelAdmin):
     list_filter = ('is_read',)
     search_fields = ('title', 'author', 'book__title')
     ordering = ('book', 'order')
+
 
 @admin.register(ISBNCache)
 class ISBNCacheAdmin(admin.ModelAdmin):

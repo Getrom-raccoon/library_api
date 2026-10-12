@@ -25,7 +25,18 @@ class Author(models.Model):
 class Book(models.Model):
     title = models.CharField(max_length=200)
     author = models.ForeignKey(Author, on_delete=models.CASCADE, related_name='books')
-    genre = models.CharField(max_length=50, blank=True, null=True)
+    # Список жанров (JSON-массив строк) — вместо одиночного genre
+    genres = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name='Жанры'
+    )
+    publisher = models.CharField(
+        max_length=150,
+        blank=True,
+        null=True,
+        verbose_name='Издательство'
+    )
     isbn = models.CharField(max_length=13, unique=True, blank=True, null=True)
     published_year = models.IntegerField(blank=True, null=True)
     total_copies = models.IntegerField(default=1)

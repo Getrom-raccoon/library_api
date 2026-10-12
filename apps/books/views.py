@@ -17,7 +17,7 @@ from .isbn_lookup import lookup_openlibrary
 class BookViewSet(viewsets.ModelViewSet):
     serializer_class = BookSerializer
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
-    filterset_fields = ['genre', 'reading_status', 'rating', 'author']
+    filterset_fields = ['reading_status', 'rating', 'author']
     ordering_fields = ['title', 'published_year', 'rating', 'added_at']
 
     def get_queryset(self):
@@ -25,19 +25,37 @@ class BookViewSet(viewsets.ModelViewSet):
 
         search = self.request.query_params.get('search', '').strip()
         if search:
-            # PostgreSQL с локалью C не понимает icontains для кириллицы,
-            # поэтому фильтруем в Python — регистронезависимо.
+            # PostgreSQL с локалью C не понимает icontains для кириллицы.
+            # Поэтому фильтруем в Python — регистронезависимо.
             search_lower = search.lower()
             matching_ids = []
             for b in queryset.select_related('author'):
+                genres_match = any(
+                    search_lower in (g or '').lower()
+                    for g in (b.genres or [])
+                )
+                publisher_match = (
+                    b.publisher and search_lower in b.publisher.lower()
+                )
                 if (b.title and search_lower in b.title.lower()) \
                         or (b.author and b.author.name
                             and search_lower in b.author.name.lower()) \
-                        or (b.isbn and search_lower in b.isbn.lower()):
+                        or (b.isbn and search_lower in b.isbn.lower()) \
+                        or genres_match \
+                        or publisher_match:
                     matching_ids.append(b.id)
-            queryset = Book.objects.filter(
-                id__in=matching_ids
-            ).select_related('author')
+            queryset = Book.objects.filter(id__in=matching_ids).select_related('author')
+
+        # Фильтр по жанру (ищем в списке genres)
+        genre = self.request.query_params.get('genre', '').strip()
+        if genre:
+            genre_lower = genre.lower()
+            matching_ids = [
+                b.id for b in queryset
+                if any(genre_lower in (g or '').lower()
+                       for g in (b.genres or []))
+            ]
+            queryset = queryset.filter(id__in=matching_ids)
 
         return queryset
 
