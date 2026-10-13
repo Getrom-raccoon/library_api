@@ -36,6 +36,24 @@ class QuoteSerializer(serializers.ModelSerializer):
         read_only_fields = ['id']
 
 
+class QuoteWithBookSerializer(serializers.ModelSerializer):
+    book_title = serializers.CharField(source='book.title', read_only=True)
+    book_id = serializers.IntegerField(source='book.id', read_only=True)
+    book_author = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Quote
+        fields = [
+            'id', 'text', 'page', 'order',
+            'book_id', 'book_title', 'book_author',
+        ]
+
+    def get_book_author(self, obj):
+        if obj.book.author:
+            return obj.book.author.name
+        return ''
+
+
 class BookSerializer(serializers.ModelSerializer):
     author_detail = AuthorSerializer(source='author', read_only=True)
     series_detail = SeriesSerializer(source='series', read_only=True)

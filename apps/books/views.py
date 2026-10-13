@@ -9,8 +9,11 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 
-from .models import Book, Author, ISBNCache, Series
-from .serializers import BookSerializer, AuthorSerializer, SeriesSerializer
+from .models import Book, Author, ISBNCache, Series, Quote
+from .serializers import (
+    BookSerializer, AuthorSerializer, SeriesSerializer,
+    QuoteWithBookSerializer,
+)
 from .isbn_lookup import lookup_openlibrary
 
 
@@ -178,3 +181,13 @@ class SeriesViewSet(viewsets.ModelViewSet):
                 {'name': 'Серия с таким названием уже существует'}
             )
         serializer.save(owner=self.request.user)
+
+
+class QuoteViewSet(viewsets.ReadOnlyModelViewSet):
+    """Все цитаты текущего пользователя (из всех его книг)."""
+    serializer_class = QuoteWithBookSerializer
+
+    def get_queryset(self):
+        return Quote.objects.filter(
+            book__owner=self.request.user
+        ).select_related('book', 'book__author').order_by('-created_at')
