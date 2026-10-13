@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Book, Author, Work, ISBNCache, Series
+from .models import Book, Author, Work, ISBNCache, Series, Quote
 
 
 @admin.register(Author)
@@ -16,6 +16,12 @@ class WorkInline(admin.TabularInline):
     fields = ('order', 'title', 'author', 'is_read')
 
 
+class QuoteInline(admin.TabularInline):
+    model = Quote
+    extra = 1
+    fields = ('order', 'text', 'page')
+
+
 @admin.register(Book)
 class BookAdmin(admin.ModelAdmin):
     list_display = (
@@ -25,7 +31,7 @@ class BookAdmin(admin.ModelAdmin):
     )
     list_filter = ('author', 'reading_status', 'publisher', 'series')
     search_fields = ('title', 'isbn', 'author__name', 'publisher', 'series__name')
-    inlines = [WorkInline]
+    inlines = [WorkInline, QuoteInline]
 
 
 @admin.register(Work)
@@ -54,3 +60,15 @@ class SeriesAdmin(admin.ModelAdmin):
     def books_count(self, obj):
         return obj.books.count()
     books_count.short_description = 'Книг в серии'
+
+
+@admin.register(Quote)
+class QuoteAdmin(admin.ModelAdmin):
+    list_display = ('id', 'text_preview', 'page', 'book')
+    search_fields = ('text', 'book__title')
+    list_filter = ('book',)
+    ordering = ('book', 'order')
+
+    def text_preview(self, obj):
+        return obj.text[:60] + ('…' if len(obj.text) > 60 else '')
+    text_preview.short_description = 'Цитата'

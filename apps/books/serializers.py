@@ -1,7 +1,7 @@
 import re
 
 from rest_framework import serializers
-from .models import Book, Author, Work, ISBNCache, Series
+from .models import Book, Author, Work, ISBNCache, Series, Quote
 
 
 class AuthorSerializer(serializers.ModelSerializer):
@@ -29,6 +29,13 @@ class SeriesSerializer(serializers.ModelSerializer):
         return obj.books.count()
 
 
+class QuoteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Quote
+        fields = ['id', 'text', 'page', 'order']
+        read_only_fields = ['id']
+
+
 class BookSerializer(serializers.ModelSerializer):
     author_detail = AuthorSerializer(source='author', read_only=True)
     series_detail = SeriesSerializer(source='series', read_only=True)
@@ -37,6 +44,7 @@ class BookSerializer(serializers.ModelSerializer):
         read_only=True
     )
     works = WorkSerializer(many=True, required=False)
+    quotes = QuoteSerializer(many=True, required=False)
 
     class Meta:
         model = Book
@@ -51,6 +59,7 @@ class BookSerializer(serializers.ModelSerializer):
             'started_reading', 'finished_reading',
             'added_at',
             'works',
+            'quotes',
         ]
         read_only_fields = ['owner', 'added_at']
 
@@ -76,14 +85,19 @@ class BookSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         works_data = validated_data.pop('works', [])
+        quotes_data = validated_data.pop('quotes', [])
         book = Book.objects.create(**validated_data)
         for i, w in enumerate(works_data):
             w.pop('id', None)
             Work.objects.create(book=book, order=i, **w)
+        for i, q in enumerate(quotes_data):
+            q.pop('id', None)
+            Quote.objects.create(book=book, order=i, **q)
         return book
 
     def update(self, instance, validated_data):
         works_data = validated_data.pop('works', None)
+        quotes_data = validated_data.pop('quotes', None)
 
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
@@ -94,5 +108,11 @@ class BookSerializer(serializers.ModelSerializer):
             for i, w in enumerate(works_data):
                 w.pop('id', None)
                 Work.objects.create(book=instance, order=i, **w)
+
+        if quotes_data is not None:
+            instance.quotes.all().delete()
+            for i, q in enumerate(quotes_data):
+                q.pop('id', None)
+                Quote.objects.create(book=instance, order=i, **q)
 
         return instance

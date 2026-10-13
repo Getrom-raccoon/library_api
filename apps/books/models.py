@@ -211,6 +211,43 @@ class Work(models.Model):
     def __str__(self):
         return self.title
 
+
+class Quote(models.Model):
+    """Цитата из книги с указанием страницы."""
+    book = models.ForeignKey(
+        Book,
+        on_delete=models.CASCADE,
+        related_name='quotes',
+        verbose_name='Книга'
+    )
+    text = models.TextField(
+        verbose_name='Текст цитаты',
+        help_text='Сама цитата'
+    )
+    page = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name='Страница',
+        help_text='На какой странице в книге'
+    )
+    order = models.PositiveIntegerField(
+        default=0,
+        verbose_name='Порядок'
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Дата добавления'
+    )
+
+    class Meta:
+        verbose_name = 'Цитата'
+        verbose_name_plural = 'Цитаты'
+        ordering = ['order', 'id']
+
+    def __str__(self):
+        return f'{self.text[:50]}... (стр. {self.page})'
+
+
 class ISBNCache(models.Model):
     """Кэш данных о книгах по ISBN. Общий для всех пользователей."""
     isbn = models.CharField(
