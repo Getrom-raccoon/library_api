@@ -25,26 +25,48 @@ class BookViewSet(viewsets.ModelViewSet):
 
         search = self.request.query_params.get('search', '').strip()
         if search:
-            # PostgreSQL с локалью C не понимает icontains для кириллицы.
-            # Поэтому фильтруем в Python — регистронезависимо.
+            import re as _re
+            split_re = _re.compile(r'[^a-zа-яё0-9]+', _re.IGNORECASE)
+
+            def _word_match(target: str, query_words: list) -> bool:
+                if not target:
+                    return False
+                target_words = [
+                    w for w in split_re.split(target.lower()) if w
+                ]
+                if not target_words:
+                    return False
+                return all(
+                    any(tw.startswith(qw) for tw in target_words)
+                    for qw in query_words
+                )
+
             search_lower = search.lower()
+            query_words = [
+                w for w in split_re.split(search_lower) if w
+            ]
+
             matching_ids = []
             for b in queryset.select_related('author'):
-                genres_match = any(
-                    search_lower in (g or '').lower()
-                    for g in (b.genres or [])
+                genres_text = ' '.join(b.genres or [])
+
+                title_match = _word_match(b.title or '', query_words)
+                author_match = (
+                        b.author and _word_match(b.author.name or '', query_words)
                 )
-                publisher_match = (
-                    b.publisher and search_lower in b.publisher.lower()
+                publisher_match = _word_match(b.publisher or '', query_words)
+                genres_match = _word_match(genres_text, query_words)
+                isbn_match = (
+                        b.isbn and search_lower in b.isbn.lower()
                 )
-                if (b.title and search_lower in b.title.lower()) \
-                        or (b.author and b.author.name
-                            and search_lower in b.author.name.lower()) \
-                        or (b.isbn and search_lower in b.isbn.lower()) \
-                        or genres_match \
-                        or publisher_match:
+
+                if (title_match or author_match or publisher_match
+                        or genres_match or isbn_match):
                     matching_ids.append(b.id)
-            queryset = Book.objects.filter(id__in=matching_ids).select_related('author')
+
+            queryset = Book.objects.filter(
+                id__in=matching_ids
+            ).select_related('author')
 
         # Фильтр по жанру (ищем в списке genres)
         genre = self.request.query_params.get('genre', '').strip()
