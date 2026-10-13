@@ -20,10 +20,11 @@ class WorkInline(admin.TabularInline):
 class BookAdmin(admin.ModelAdmin):
     list_display = (
         'id', 'title', 'author', 'publisher',
+        'series', 'series_number',
         'isbn', 'available_copies', 'reading_status',
     )
-    list_filter = ('author', 'reading_status', 'publisher')
-    search_fields = ('title', 'isbn', 'author__name', 'publisher')
+    list_filter = ('author', 'reading_status', 'publisher', 'series')
+    search_fields = ('title', 'isbn', 'author__name', 'publisher', 'series__name')
     inlines = [WorkInline]
 
 
