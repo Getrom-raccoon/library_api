@@ -191,15 +191,27 @@ class QuoteViewSet(viewsets.ModelViewSet):
             book__owner=self.request.user
         ).select_related('book', 'book__author').order_by('-created_at')
 
-    def perform_create(self, serializer):
+    def _get_book_or_none(self):
         book_id = self.request.data.get('book')
         if not book_id:
-            from rest_framework.exceptions import ValidationError
-            raise ValidationError({'book': 'Обязательное поле'})
-        book = Book.objects.filter(
+            return None
+        return Book.objects.filter(
             id=book_id, owner=self.request.user
         ).first()
+
+    def perform_create(self, serializer):
+        book = self._get_book_or_none()
         if not book:
             from rest_framework.exceptions import ValidationError
-            raise ValidationError({'book': 'Книга не найдена'})
+            raise ValidationError({'book': 'Обязательное поле'})
         serializer.save(book=book)
+
+    def perform_update(self, serializer):
+        if 'book' in self.request.data:
+            book = self._get_book_or_none()
+            if not book:
+                from rest_framework.exceptions import ValidationError
+                raise ValidationError({'book': 'Книга не найдена'})
+            serializer.save(book=book)
+        else:
+            serializer.save()
