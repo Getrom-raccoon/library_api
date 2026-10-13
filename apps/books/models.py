@@ -22,6 +22,51 @@ class Author(models.Model):
         return self.name
 
 
+class Series(models.Model):
+    """Серия книг"""
+    name = models.CharField(
+        max_length=200,
+        verbose_name='Название серии'
+    )
+    description = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name='Описание серии',
+        help_text='Необязательное описание серии'
+    )
+    owner = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='series',
+        null=True,
+        blank=True,
+        verbose_name='Владелец'
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Дата создания'
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name='Дата обновления'
+    )
+
+    class Meta:
+        verbose_name = 'Серия'
+        verbose_name_plural = 'Серии'
+        ordering = ['name']
+        # Один пользователь не может иметь две серии с одинаковым названием
+        constraints = [
+            models.UniqueConstraint(
+                fields=['owner', 'name'],
+                name='unique_series_per_owner'
+            )
+        ]
+
+    def __str__(self):
+        return self.name
+
+
 class Book(models.Model):
     title = models.CharField(max_length=200)
     author = models.ForeignKey(Author, on_delete=models.CASCADE, related_name='books')
@@ -36,6 +81,22 @@ class Book(models.Model):
         blank=True,
         null=True,
         verbose_name='Издательство'
+    )
+    # Ссылка на серию (если книга входит в серию)
+    series = models.ForeignKey(
+        Series,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='books',
+        verbose_name='Серия',
+        help_text='Серия, к которой относится книга'
+    )
+    series_number = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name='Номер в серии',
+        help_text='Порядковый номер книги в серии'
     )
     isbn = models.CharField(max_length=13, unique=True, blank=True, null=True)
     published_year = models.IntegerField(blank=True, null=True)

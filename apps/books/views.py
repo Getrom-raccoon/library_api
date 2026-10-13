@@ -9,8 +9,8 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 
-from .models import Book, Author, ISBNCache
-from .serializers import BookSerializer, AuthorSerializer
+from .models import Book, Author, ISBNCache, Series
+from .serializers import BookSerializer, AuthorSerializer, SeriesSerializer
 from .isbn_lookup import lookup_openlibrary
 
 
@@ -136,5 +136,23 @@ class AuthorViewSet(viewsets.ModelViewSet):
             from rest_framework.exceptions import ValidationError
             raise ValidationError(
                 {'name': 'Автор с таким именем уже существует'}
+            )
+        serializer.save(owner=self.request.user)
+
+class SeriesViewSet(viewsets.ModelViewSet):
+    serializer_class = SeriesSerializer
+
+    def get_queryset(self):
+        return Series.objects.filter(owner=self.request.user)
+
+    def perform_create(self, serializer):
+        name = serializer.validated_data.get('name', '').strip()
+        existing = Series.objects.filter(
+            owner=self.request.user, name__iexact=name
+        ).first()
+        if existing:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError(
+                {'name': 'Серия с таким названием уже существует'}
             )
         serializer.save(owner=self.request.user)

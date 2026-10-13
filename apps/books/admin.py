@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Book, Author, Work, ISBNCache
+from .models import Book, Author, Work, ISBNCache, Series
 
 
 @admin.register(Author)
@@ -41,3 +41,15 @@ class ISBNCacheAdmin(admin.ModelAdmin):
     search_fields = ('isbn', 'title', 'author_name')
     list_filter = ('source',)
     readonly_fields = ('created_at', 'updated_at')
+
+
+@admin.register(Series)
+class SeriesAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name', 'owner', 'books_count', 'created_at')
+    search_fields = ('name',)
+    list_filter = ('owner',)
+    readonly_fields = ('created_at', 'updated_at')
+
+    def books_count(self, obj):
+        return obj.books.count()
+    books_count.short_description = 'Книг в серии'
