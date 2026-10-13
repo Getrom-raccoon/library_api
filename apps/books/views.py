@@ -184,11 +184,22 @@ class SeriesViewSet(viewsets.ModelViewSet):
 
 
 class QuoteViewSet(viewsets.ModelViewSet):
-    """Все цитаты текущего пользователя (из всех его книг)
-    """
     serializer_class = QuoteWithBookSerializer
 
     def get_queryset(self):
         return Quote.objects.filter(
             book__owner=self.request.user
         ).select_related('book', 'book__author').order_by('-created_at')
+
+    def perform_create(self, serializer):
+        book_id = self.request.data.get('book')
+        if not book_id:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({'book': 'Обязательное поле'})
+        book = Book.objects.filter(
+            id=book_id, owner=self.request.user
+        ).first()
+        if not book:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({'book': 'Книга не найдена'})
+        serializer.save(book=book)
