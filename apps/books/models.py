@@ -144,6 +144,13 @@ class Book(models.Model):
         verbose_name='Количество страниц'
     )
 
+    current_page = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name='Текущая страница',
+        help_text='На какой странице остановился пользователь'
+    )
+
     started_reading = models.DateField(
         null=True,
         blank=True,

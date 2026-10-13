@@ -47,7 +47,7 @@ class BookSerializer(serializers.ModelSerializer):
             'isbn', 'published_year',
             'total_copies', 'available_copies',
             'owner', 'reading_status', 'reading_status_display',
-            'rating', 'notes', 'pages',
+            'rating', 'notes', 'pages', 'current_page',
             'started_reading', 'finished_reading',
             'added_at',
             'works',
