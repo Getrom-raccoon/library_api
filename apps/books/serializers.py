@@ -47,6 +47,7 @@ class QuoteWithBookSerializer(serializers.ModelSerializer):
             'id', 'text', 'page', 'order',
             'book_id', 'book_title', 'book_author',
         ]
+        read_only_fields = ['id', 'book_id', 'book_title', 'book_author']
 
     def get_book_author(self, obj):
         if obj.book.author:

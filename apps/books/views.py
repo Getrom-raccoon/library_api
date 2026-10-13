@@ -183,8 +183,9 @@ class SeriesViewSet(viewsets.ModelViewSet):
         serializer.save(owner=self.request.user)
 
 
-class QuoteViewSet(viewsets.ReadOnlyModelViewSet):
-    """Все цитаты текущего пользователя (из всех его книг)."""
+class QuoteViewSet(viewsets.ModelViewSet):
+    """Все цитаты текущего пользователя (из всех его книг)
+    """
     serializer_class = QuoteWithBookSerializer
 
     def get_queryset(self):
