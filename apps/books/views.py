@@ -17,7 +17,7 @@ from .isbn_lookup import lookup_openlibrary
 class BookViewSet(viewsets.ModelViewSet):
     serializer_class = BookSerializer
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
-    filterset_fields = ['reading_status', 'rating', 'author']
+    filterset_fields = ['reading_status', 'rating', 'author', 'series']
     ordering_fields = ['title', 'published_year', 'rating', 'added_at']
 
     def get_queryset(self):
