@@ -2,6 +2,7 @@ import re
 
 from django.db.models import Q
 from django.utils import timezone
+from django.shortcuts import get_object_or_404
 from datetime import timedelta
 
 from rest_framework import viewsets, filters
@@ -12,9 +13,14 @@ from django_filters.rest_framework import DjangoFilterBackend
 from .models import Book, Author, ISBNCache, Series, Quote
 from .serializers import (
     BookSerializer, AuthorSerializer, SeriesSerializer,
-    QuoteWithBookSerializer,
+    QuoteWithBookSerializer, ReadingSessionSerializer,
 )
 from .isbn_lookup import lookup_openlibrary
+
+def perform_create(self, serializer):
+    book_id = self.request.data.get('book')
+    book = get_object_or_404(Book, id=book_id, owner=self.request.user)
+    serializer.save(book=book)
 
 
 class BookViewSet(viewsets.ModelViewSet):
@@ -215,3 +221,22 @@ class QuoteViewSet(viewsets.ModelViewSet):
             serializer.save(book=book)
         else:
             serializer.save()
+
+
+class ReadingSessionViewSet(viewsets.ModelViewSet):
+    """Сессии чтения — привязаны к книге, доступны только владельцу."""
+    serializer_class = ReadingSessionSerializer
+
+    def get_queryset(self):
+        qs = ReadingSession.objects.filter(
+            book__owner=self.request.user
+        ).select_related('book')
+        book_id = self.request.query_params.get('book')
+        if book_id:
+            qs = qs.filter(book_id=book_id)
+        return qs
+
+    def perform_create(self, serializer):
+        book_id = self.request.data.get('book')
+        book = Book.objects.get(id=book_id, owner=self.request.user)
+        serializer.save(book=book)

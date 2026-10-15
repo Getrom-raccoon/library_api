@@ -1,7 +1,7 @@
 import re
 
 from rest_framework import serializers
-from .models import Book, Author, Work, ISBNCache, Series, Quote
+from .models import Book, Author, Work, ISBNCache, Series, Quote, ReadingSession
 
 
 class AuthorSerializer(serializers.ModelSerializer):
@@ -15,6 +15,13 @@ class WorkSerializer(serializers.ModelSerializer):
         model = Work
         fields = ['id', 'title', 'author', 'is_read', 'order']
         read_only_fields = ['id']
+
+
+class ReadingSessionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ReadingSession
+        fields = ['id', 'duration_seconds', 'date', 'created_at']
+        read_only_fields = ['id', 'created_at']
 
 
 class SeriesSerializer(serializers.ModelSerializer):

@@ -277,3 +277,39 @@ class ISBNCache(models.Model):
 
     def __str__(self):
         return f'{self.isbn} — {self.title}'
+
+class ReadingSession(models.Model):
+    """Один сеанс чтения книги — таймер, секундомер или ручной ввод."""
+    book = models.ForeignKey(
+        Book,
+        on_delete=models.CASCADE,
+        related_name='sessions',
+        verbose_name='Книга',
+    )
+    duration_seconds = models.PositiveIntegerField(
+        verbose_name='Длительность (секунды)',
+        help_text='Сколько читал за этот сеанс',
+    )
+    date = models.DateField(
+        verbose_name='Дата чтения',
+        help_text='Обычно сегодня, но можно указать вручную',
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Дата создания',
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name='Дата обновления',
+    )
+
+    class Meta:
+        verbose_name = 'Сессия чтения'
+        verbose_name_plural = 'Сессии чтения'
+        ordering = ['-date', '-created_at']
+        indexes = [
+            models.Index(fields=['book', '-date']),
+        ]
+
+    def __str__(self):
+        return f'{self.book.title}: {self.duration_seconds} сек, {self.date}'
