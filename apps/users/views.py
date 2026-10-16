@@ -9,6 +9,9 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
+
 from .models import User
 from .serializers import (
     RegisterSerializer,
@@ -184,3 +187,54 @@ class ProfileView(generics.RetrieveUpdateAPIView):
 
     def get_object(self):
         return self.request.user
+
+class FeedbackView(APIView):
+    """письмо с обратной связью от пользователя."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        message = (request.data.get('message') or '').strip()
+        subject = (request.data.get('subject') or 'Обратная связь').strip()
+        contact_email = (request.data.get('contact_email') or '').strip()
+
+        if not message:
+            return Response(
+                {'error': 'Введите сообщение'},
+                status=400,
+            )
+
+        if len(message) > 5000:
+            return Response(
+                {'error': 'Сообщение слишком длинное (макс. 5000 символов)'},
+                status=400,
+            )
+
+        user = request.user
+        user_email = user.email or 'не указан'
+
+        body = (
+            f'Сообщение от пользователя приложения\n'
+            f'================\n'
+            f'Отправитель: {user_email}\n'
+            f'Контактный email: {contact_email or user_email}\n'
+            f'Тема: {subject}\n'
+            f'================\n\n'
+            f'{message}\n\n'
+            f'================\n'
+            f'Отправлено из приложения Raccoon Library.'
+        )
+
+        try:
+            send_mail(
+                subject=f'[Raccoon Library] {subject}',
+                message=body,
+                from_email=None,
+                recipient_list=['getrom.raccoon@gmail.com'],
+                fail_silently=False,
+            )
+            return Response({'success': True})
+        except Exception as e:
+            return Response(
+                {'error': f'Не удалось отправить: {e}'},
+                status=500,
+            )
