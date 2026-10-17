@@ -1,8 +1,9 @@
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 
-User = get_user_model()  # ← переместили сюда, наверх
+User = get_user_model()
 
 
 class Author(models.Model):
@@ -55,7 +56,6 @@ class Series(models.Model):
         verbose_name = 'Серия'
         verbose_name_plural = 'Серии'
         ordering = ['name']
-        # Один пользователь не может иметь две серии с одинаковым названием
         constraints = [
             models.UniqueConstraint(
                 fields=['owner', 'name'],
@@ -70,7 +70,6 @@ class Series(models.Model):
 class Book(models.Model):
     title = models.CharField(max_length=200)
     author = models.ForeignKey(Author, on_delete=models.CASCADE, related_name='books')
-    # Список жанров (JSON-массив строк) — вместо одиночного genre
     genres = models.JSONField(
         default=list,
         blank=True,
@@ -110,6 +109,8 @@ class Book(models.Model):
         blank=True,
         verbose_name='Владелец'
     )
+    is_deleted = models.BooleanField(default=False)
+    deleted_at = models.DateTimeField(null=True, blank=True)
 
     class ReadingStatus(models.TextChoices):
         NOT_STARTED = 'not_started', 'Не начата'
@@ -238,6 +239,8 @@ class Quote(models.Model):
         auto_now_add=True,
         verbose_name='Дата добавления'
     )
+    is_deleted = models.BooleanField(default=False)
+    deleted_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         verbose_name = 'Цитата'

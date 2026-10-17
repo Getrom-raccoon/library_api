@@ -17,6 +17,7 @@ from .serializers import (
 )
 from .isbn_lookup import lookup_openlibrary
 
+
 def perform_create(self, serializer):
     book_id = self.request.data.get('book')
     book = get_object_or_404(Book, id=book_id, owner=self.request.user)
@@ -30,7 +31,23 @@ class BookViewSet(viewsets.ModelViewSet):
     ordering_fields = ['title', 'published_year', 'rating', 'added_at']
 
     def get_queryset(self):
-        queryset = Book.objects.filter(owner=self.request.user)
+        # 1. Автоочистка: удаляем то, что в корзине > 5 дней
+        expiry_date = timezone.now() - timedelta(days=5)
+        Book.objects.filter(
+            owner=self.request.user,
+            is_deleted=True,
+            deleted_at__lt=expiry_date
+        ).delete()
+
+        # 2. Проверяем, не запросили ли корзину
+        show_deleted = self.request.query_params.get('deleted') == 'true'
+
+        if show_deleted:
+            # Если открыли корзину — показываем ТОЛЬКО удаленные
+            return Book.objects.filter(owner=self.request.user, is_deleted=True)
+
+        # 3. Твой старый код поиска, но с фильтром активных книг
+        queryset = Book.objects.filter(owner=self.request.user, is_deleted=False)
 
         search = self.request.query_params.get('search', '').strip()
         if search:
@@ -74,7 +91,7 @@ class BookViewSet(viewsets.ModelViewSet):
                     matching_ids.append(b.id)
 
             queryset = Book.objects.filter(
-                id__in=matching_ids
+                id__in=matching_ids, is_deleted=False
             ).select_related('author')
 
         # Фильтр по жанру (ищем в списке genres)
@@ -150,6 +167,33 @@ class BookViewSet(viewsets.ModelViewSet):
             'source': obj.source,
         }
 
+    def perform_destroy(self, instance):
+        # Мягкое удаление книги
+        instance.is_deleted = True
+        instance.deleted_at = timezone.now()
+        instance.save()
+
+        # Мягко удаляем все цитаты этой книги
+        for quote in instance.quotes.all():
+            quote.is_deleted = True
+            quote.deleted_at = timezone.now()
+            quote.save()
+
+    @action(detail=True, methods=['post'])
+    def restore(self, request, pk=None):
+        book = self.get_object()
+        book.is_deleted = False
+        book.deleted_at = None
+        book.save()
+
+        # Восстанавливаем цитаты
+        for quote in book.quotes.all():
+            quote.is_deleted = False
+            quote.deleted_at = None
+            quote.save()
+
+        return Response({'status': 'restored'})
+
 
 class AuthorViewSet(viewsets.ModelViewSet):
     serializer_class = AuthorSerializer
@@ -169,6 +213,7 @@ class AuthorViewSet(viewsets.ModelViewSet):
                 {'name': 'Автор с таким именем уже существует'}
             )
         serializer.save(owner=self.request.user)
+
 
 class SeriesViewSet(viewsets.ModelViewSet):
     serializer_class = SeriesSerializer
@@ -193,8 +238,26 @@ class QuoteViewSet(viewsets.ModelViewSet):
     serializer_class = QuoteWithBookSerializer
 
     def get_queryset(self):
+        # 1. Автоочистка (удаляем то, что в корзине > 5 дней)
+        expiry_date = timezone.now() - timedelta(days=5)
+        Quote.objects.filter(
+            book__owner=self.request.user,
+            is_deleted=True,
+            deleted_at__lt=expiry_date
+        ).delete()
+
+        # 2. Проверка корзины
+        show_deleted = self.request.query_params.get('deleted') == 'true'
+        if show_deleted:
+            return Quote.objects.filter(
+                book__owner=self.request.user,
+                is_deleted=True
+            ).select_related('book', 'book__author').order_by('-created_at')
+
+        # 3. Обычный список
         return Quote.objects.filter(
-            book__owner=self.request.user
+            book__owner=self.request.user,
+            is_deleted=False
         ).select_related('book', 'book__author').order_by('-created_at')
 
     def _get_book_or_none(self):
@@ -221,6 +284,20 @@ class QuoteViewSet(viewsets.ModelViewSet):
             serializer.save(book=book)
         else:
             serializer.save()
+
+    def perform_destroy(self, instance):
+        # Мягкое удаление цитаты
+        instance.is_deleted = True
+        instance.deleted_at = timezone.now()
+        instance.save()
+
+    @action(detail=True, methods=['post'])
+    def restore(self, request, pk=None):
+        quote = self.get_object()
+        quote.is_deleted = False
+        quote.deleted_at = None
+        quote.save()
+        return Response({'status': 'restored'})
 
 
 class ReadingSessionViewSet(viewsets.ModelViewSet):
