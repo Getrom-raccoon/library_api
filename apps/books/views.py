@@ -31,7 +31,6 @@ class BookViewSet(viewsets.ModelViewSet):
     ordering_fields = ['title', 'published_year', 'rating', 'added_at']
 
     def get_queryset(self):
-        # 1. Автоочистка: удаляем то, что в корзине > 5 дней
         expiry_date = timezone.now() - timedelta(days=5)
         Book.objects.filter(
             owner=self.request.user,
@@ -39,14 +38,11 @@ class BookViewSet(viewsets.ModelViewSet):
             deleted_at__lt=expiry_date
         ).delete()
 
-        # 2. Проверяем, не запросили ли корзину
         show_deleted = self.request.query_params.get('deleted') == 'true'
 
         if show_deleted:
-            # Если открыли корзину — показываем ТОЛЬКО удаленные
             return Book.objects.filter(owner=self.request.user, is_deleted=True)
 
-        # 3. Твой старый код поиска, но с фильтром активных книг
         queryset = Book.objects.filter(owner=self.request.user, is_deleted=False)
 
         search = self.request.query_params.get('search', '').strip()
@@ -94,7 +90,7 @@ class BookViewSet(viewsets.ModelViewSet):
                 id__in=matching_ids, is_deleted=False
             ).select_related('author')
 
-        # Фильтр по жанру (ищем в списке genres)
+        # Фильтр по жанру
         genre = self.request.query_params.get('genre', '').strip()
         if genre:
             genre_lower = genre.lower()
@@ -187,7 +183,7 @@ class BookViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def restore(self, request, pk=None):
-        book = self.get_object()
+        book = get_object_or_404(Book, id=pk, owner=request.user)
         book.is_deleted = False
         book.deleted_at = None
         book.save()
@@ -304,7 +300,7 @@ class QuoteViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def restore(self, request, pk=None):
-        quote = self.get_object()
+        quote = get_object_or_404(Quote, id=pk, book__owner=request.user)
         quote.is_deleted = False
         quote.deleted_at = None
         quote.save()
