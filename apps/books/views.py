@@ -179,6 +179,12 @@ class BookViewSet(viewsets.ModelViewSet):
             quote.deleted_at = timezone.now()
             quote.save()
 
+    @action(detail=True, methods=['delete'])
+    def hard_delete(self, request, pk=None):
+        book = self.get_object()
+        book.delete()
+        return Response({'status': 'deleted'})
+
     @action(detail=True, methods=['post'])
     def restore(self, request, pk=None):
         book = self.get_object()
@@ -286,10 +292,15 @@ class QuoteViewSet(viewsets.ModelViewSet):
             serializer.save()
 
     def perform_destroy(self, instance):
-        # Мягкое удаление цитаты
         instance.is_deleted = True
         instance.deleted_at = timezone.now()
         instance.save()
+
+    @action(detail=True, methods=['delete'])
+    def hard_delete(self, request, pk=None):
+        quote = self.get_object()
+        quote.delete()
+        return Response({'status': 'deleted'})
 
     @action(detail=True, methods=['post'])
     def restore(self, request, pk=None):
